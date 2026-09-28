@@ -1997,19 +1997,56 @@ class TestDraft4Validator(AntiDraft6LeakMixin, ValidatorTestMixin, TestCase):
     invalid = {"type": "integer"}, "foo"
 
 
-class TestDraft6Validator(ValidatorTestMixin, TestCase):
+class AdditionalItemsMixin:
+    """
+    `additionalItems` only applies when `items` is an array of schemas.
+
+    See section 6.4.2 of the draft-07 validation specification.
+    """
+
+    def test_additionalItems_is_ignored_when_items_is_a_boolean_schema(self):
+        """
+        `items` may be any schema, including the boolean schemas, and
+        `additionalItems` MUST be ignored unless `items` is an array.
+        """
+        false_schema = {"items": True, "additionalItems": False}
+        self.Validator.check_schema(false_schema)
+        self.Validator(false_schema).validate([1, 2, 3])
+
+        schema = {"items": True, "additionalItems": {"type": "string"}}
+        self.Validator(schema).validate([1, 2, 3])
+
+    def test_additionalItems_is_ignored_when_items_is_false(self):
+        """
+        `items: false` rejects every element on its own, so there are no
+        additional items left for `additionalItems` to apply to.
+        """
+        self.Validator({"items": False, "additionalItems": False}).validate([])
+
+    def test_additionalItems_still_applies_to_array_items(self):
+        schema = {"items": [], "additionalItems": False}
+        self.Validator(schema).validate([])
+        with self.assertRaises(exceptions.ValidationError):
+            self.Validator(schema).validate([1])
+
+
+class TestDraft6Validator(AdditionalItemsMixin, ValidatorTestMixin, TestCase):
     Validator = validators.Draft6Validator
     valid: tuple[dict, dict] = ({}, {})
     invalid = {"type": "integer"}, "foo"
 
 
-class TestDraft7Validator(ValidatorTestMixin, TestCase):
+class TestDraft7Validator(AdditionalItemsMixin, ValidatorTestMixin, TestCase):
     Validator = validators.Draft7Validator
     valid: tuple[dict, dict] = ({}, {})
     invalid = {"type": "integer"}, "foo"
 
 
-class TestDraft201909Validator(ValidatorTestMixin, TestCase):
+class TestDraft201909Validator(
+    AdditionalItemsMixin,
+    ValidatorTestMixin,
+    TestCase,
+):
     Validator = validators.Draft201909Validator
     valid: tuple[dict, dict] = ({}, {})
     invalid = {"type": "integer"}, "foo"

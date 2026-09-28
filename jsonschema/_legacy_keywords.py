@@ -106,18 +106,18 @@ def items_draft3_draft4(validator, items, instance, schema):
 def additionalItems(validator, aI, instance, schema):
     if (
         not validator.is_type(instance, "array")
-        or validator.is_type(schema.get("items", {}), "object")
+        or not validator.is_type(schema.get("items", {}), "array")
     ):
         return
 
-    len_items = len(schema.get("items", []))
+    len_items = len(schema["items"])
     if validator.is_type(aI, "object"):
         for index, item in enumerate(instance[len_items:], start=len_items):
             yield from validator.descend(item, aI, path=index)
-    elif not aI and len(instance) > len(schema.get("items", [])):
+    elif not aI and len(instance) > len_items:
         error = "Additional items are not allowed (%s %s unexpected)"
         yield ValidationError(
-            error % _utils.extras_msg(instance[len(schema.get("items", [])):]),
+            error % _utils.extras_msg(instance[len_items:]),
         )
 
 
